@@ -1,14 +1,14 @@
 // copied from https://stackoverflow.com/q/14915988
 
- #include <netinet/in.h>
- #include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 //  #include <netdb.h>
 
 //  #include <sys/signal.h>
 
 //  #include <unistd.h>
-//  #include <stdlib.h>
-//  #include <stdio.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 
@@ -55,7 +55,7 @@ int main() {
 
     int port_num = 3333;
     int backlog = 5;
-    
+
     int sock_ds = initialize_server(port_num, backlog);
     if (sock_ds == -1) {
         perror("Server initialization failed");
