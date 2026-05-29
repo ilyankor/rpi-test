@@ -50,27 +50,54 @@ void process_data(const char *data) {
     printf("Message from remote host: %s\n", data);
 }
 
+// void handle_session(int acc_ds, int max_size) {
+
+//     // create text buffer
+//     char buff[max_size];
+//     memset(buff, 0, max_size);
+    
+//     // read incoming network data until client disconnect or error
+//     // check max_size - 1 for null terminator
+//     while (read(acc_ds, buff, max_size - 1) > 0) {
+
+//         // process the data in the buffer
+//         process_data(buff);
+    
+//         // break if the client sends `quit`
+//         if (strncmp(buff, "quit", 4) == 0) break;
+
+//         memset(buff, 0, max_size);
+//     }
+
+//     // end recieving data
+//     write(acc_ds, "Reading completed\n", 18);
+//     close(acc_ds);
+// }
+
 void handle_session(int acc_ds, int max_size) {
 
     // create text buffer
     char buff[max_size];
     memset(buff, 0, max_size);
     
-    // read incoming network data until client disconnect or error
+    // read HTTP request
     // check max_size - 1 for null terminator
-    while (read(acc_ds, buff, max_size - 1) > 0) {
+    if (read(acc_ds, buff, max_size - 1) > 0) {
+        
+        // write HTTP response
+        // web browsers require a "200 OK" header before they will display text
+        const char *http_response = 
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "Connection: close\r\n"
+            "\r\n" // blank line is required to separate headers from body
+            "<h1>Hello from your Server!</h1>\n"
+            "<p>Your phone successfully connected.</p>\n";
 
-        // process the data in the buffer
-        process_data(buff);
-    
-        // break if the client sends `quit`
-        if (strncmp(buff, "quit", 4) == 0) break;
-
-        memset(buff, 0, max_size);
+        // send the page data back to the phone
+        write(acc_ds, http_response, strlen(http_response));
     }
 
-    // end recieving data
-    write(acc_ds, "Reading completed\n", 18);
     close(acc_ds);
 }
 
