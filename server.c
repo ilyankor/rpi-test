@@ -65,18 +65,25 @@ void handle_connections(int sock_ds, int max_size) {
             continue;
         }
         
+        // child process spawned
         if (fork() == 0) {
+            // child process does not need listening socket
             close(sock_ds);
 
-            do {
-                memset(buff, 0, max_size);
-                int num_bytes = read(acc_ds, buff, max_size);
-                if (num_bytes <= 0) break;
+            // read incoming network data until client disconnect or error
+            // check max_size - 1 for null terminator
+            memset(buff, 0, max_size);
+            while (read(acc_ds, buff, max_size - 1) > 0) {
                 printf("Message from remote host: %s\n", buff);
-                if (strcmp(buff, "quit") == 0) break;
-            } while (1);
+
+                // break if the client sends `quit`
+                if (strncmp(buff, "quit", 4) == 0) break;
+
+                memset(buff, 0, max_size);
+            }
             
-            write(acc_ds, "Reading done\n", 14);
+            // end recieving data
+            write(acc_ds, "Reading completed\n", 18);
             close(acc_ds);
             exit(0);
         }
