@@ -83,6 +83,10 @@ void handle_session(int acc_ds, int max_size) {
     // read HTTP request
     // check max_size - 1 for null terminator
     if (read(acc_ds, buff, max_size - 1) > 0) {
+
+
+        // process the data in the buffer
+        process_data(buff);
         
         // write HTTP response
         // web browsers require a "200 OK" header before they will display text
