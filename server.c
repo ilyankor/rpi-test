@@ -46,14 +46,39 @@ int initialize_server(int port_num, int backlog) {
     return sock_ds;
 }
 
+void process_data(const char *data) {
+    printf("Message from remote host: %s\n", data);
+}
+
+void handle_session(int acc_ds, int max_size) {
+
+    // create text buffer
+    char buff[max_size];
+    memset(buff, 0, max_size);
+    
+    // read incoming network data until client disconnect or error
+    // check max_size - 1 for null terminator
+    while (read(acc_ds, buff, max_size - 1) > 0) {
+
+        // process the data in the buffer
+        process_data(buff);
+    
+        // break if the client sends `quit`
+        if (strncmp(buff, "quit", 4) == 0) break;
+
+        memset(buff, 0, max_size);
+    }
+
+    // end recieving data
+    write(acc_ds, "Reading completed\n", 18);
+    close(acc_ds);
+}
+
 void handle_connections(int sock_ds, int max_size) {
 
     // create client IPv4 address
     struct sockaddr_in rem_addr;
     socklen_t length = sizeof(rem_addr);
-
-    // create text buffer
-    char buff[max_size];
 
     // main handling loop
     while (1) {
@@ -69,24 +94,13 @@ void handle_connections(int sock_ds, int max_size) {
         if (fork() == 0) {
             // child process does not need listening socket
             close(sock_ds);
+            
+            // handle client session
+            handle_session(acc_ds, max_size);
 
-            // read incoming network data until client disconnect or error
-            // check max_size - 1 for null terminator
-            memset(buff, 0, max_size);
-            while (read(acc_ds, buff, max_size - 1) > 0) {
-                printf("Message from remote host: %s\n", buff);
-
-                // break if the client sends `quit`
-                if (strncmp(buff, "quit", 4) == 0) break;
-
-                memset(buff, 0, max_size);
-            }
-
-            // end recieving data
-            write(acc_ds, "Reading completed\n", 18);
-            close(acc_ds);
             exit(0);
         }
+        // otherwise, parent process so close it
         else {
             close(acc_ds);
         }
@@ -96,9 +110,9 @@ void handle_connections(int sock_ds, int max_size) {
 int main() {
 
     // PARAMETERS
-    int port_num = 3333;     // port number
-    int backlog = 5;         // maximum queue size
-    int max_buf_size = 1024; // maximum size of the text buffer
+    const int port_num = 3333;     // port number
+    const int backlog = 5;         // maximum queue size
+    const int max_buf_size = 1024; // maximum size of the buffer
 
     // prevent zombie processes
     struct sigaction sa;
