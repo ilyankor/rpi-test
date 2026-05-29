@@ -18,7 +18,7 @@ int initialize_server(int port_num, int backlog) {
         perror("Socket creation error");
         return -1;
     }
-    
+
     // configure the IPv4 server address to accept connections on port_num
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
@@ -54,7 +54,7 @@ void handle_connections(int sock_ds, int max_size) {
 
     // create text buffer
     char buff[max_size];
-    
+
     // main handling loop
     while (1) {
 
@@ -64,7 +64,7 @@ void handle_connections(int sock_ds, int max_size) {
             perror("Accept error");
             continue;
         }
-        
+
         // child process spawned
         if (fork() == 0) {
             // child process does not need listening socket
@@ -81,7 +81,7 @@ void handle_connections(int sock_ds, int max_size) {
 
                 memset(buff, 0, max_size);
             }
-            
+
             // end recieving data
             write(acc_ds, "Reading completed\n", 18);
             close(acc_ds);
@@ -104,7 +104,7 @@ int main() {
     struct sigaction sa;
     sa.sa_handler = SIG_IGN;
     sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_NOCLDWAIT;  
+    sa.sa_flags = SA_NOCLDWAIT;
     sigaction(SIGCHLD, &sa, NULL);
 
     // initialize the server
