@@ -4,8 +4,8 @@
 #include <sys/socket.h>
 
 //  #include <netdb.h>
-//  #include <signal.h>
-//  #include <unistd.h>
+ #include <signal.h>
+ #include <unistd.h>
 
 #include <stdlib.h>
 #include <stdio.h>
