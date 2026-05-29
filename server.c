@@ -2,10 +2,9 @@
 
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <signal.h>
 
-//  #include <netdb.h>
- #include <signal.h>
- #include <unistd.h>
+#include <unistd.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -69,17 +68,15 @@ void handle_connections(int sock_ds, int max_size) {
         if (fork() == 0) {
             close(sock_ds);
 
-            memset(buff, 0, max_size);
-            int num_bytes = read(acc_ds, buff, max_size);
-            while (num_bytes > 0) {
-                printf("Message from remote host: %s\n", buff);
-                if (strcmp(buff, "quit") == 0) {
-                    break;
-                }
+            do {
                 memset(buff, 0, max_size);
-            }
-
-            write(acc_ds, "Reading done", 13);
+                int num_bytes = read(acc_ds, buff, max_size);
+                if (num_bytes <= 0) break;
+                printf("Message from remote host: %s\n", buff);
+                if (strcmp(buff, "quit") == 0) break;
+            } while (1);
+            
+            write(acc_ds, "Reading done\n", 14);
             close(acc_ds);
             exit(0);
         }
