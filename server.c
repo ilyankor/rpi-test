@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <string.h>
 
+// global variable for socket descriptor, used for the `close_server` function
+int global_sock_ds = -1;
+
 int initialize_server(int port_num, int backlog) {
 
     // create an IPv4 TCP/IP socket descriptor
@@ -19,26 +22,21 @@ int initialize_server(int port_num, int backlog) {
         return -1;
     }
 
-    // configure the IPv4 server address to accept connections on port_num
+    // configure the IPv4 server address to accept connections on `port_num`
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port_num);
     addr.sin_addr.s_addr = INADDR_ANY;
 
-    // return variable
-    int ret;
-
     // bind the socket to the address
-    ret = bind(sock_ds, (struct sockaddr *)&addr, sizeof(addr));
-    if (ret == -1) {
+    if (bind(sock_ds, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
         perror("Binding error");
         return -1;
     }
 
     // start listening for client connections
-    ret = listen(sock_ds, backlog);
-    if (ret == -1) {
+    if (listen(sock_ds, backlog) == -1) {
         perror("Listen error");
         return -1;
     }
@@ -84,7 +82,6 @@ void handle_session(int acc_ds, int max_size) {
     // check max_size - 1 for null terminator
     if (read(acc_ds, buff, max_size - 1) > 0) {
 
-
         // process the data in the buffer
         process_data(buff);
         
@@ -96,7 +93,7 @@ void handle_session(int acc_ds, int max_size) {
             "Connection: close\r\n"
             "\r\n" // blank line is required to separate headers from body
             "<h1>Hello from your Server!</h1>\n"
-            "<p>Your phone successfully connected.</p>\n";
+            "<p>Successfully connected.</p>\n";
 
         // send the page data back to the phone
         write(acc_ds, http_response, strlen(http_response));
@@ -104,6 +101,36 @@ void handle_session(int acc_ds, int max_size) {
 
     close(acc_ds);
 }
+
+// void handle_session(int acc_ds, int max_size) {
+
+//     // create text buffer
+//     char buff[max_size];
+//     memset(buff, 0, max_size);
+    
+//     // read incoming network data
+//     // check max_size - 1 for null terminator
+//     if (read(acc_ds, buff, max_size - 1) > 0) {
+
+//         // process the data in the buffer
+//         process_data(buff);
+        
+//         // write HTTP response
+//         // web browsers require a "200 OK" header before they will display text
+//         const char *http_response = 
+//             "HTTP/1.1 200 OK\r\n"
+//             "Content-Type: text/html\r\n"
+//             "Connection: close\r\n"
+//             "\r\n" // blank line is required to separate headers from body
+//             "<h1>Hello from your Server!</h1>\n"
+//             "<p>Successfully connected.</p>\n";
+
+//         // send the page data back to the phone
+//         write(acc_ds, http_response, strlen(http_response));
+//     }
+
+//     close(acc_ds);
+// }
 
 void handle_connections(int sock_ds, int max_size) {
 
@@ -138,6 +165,19 @@ void handle_connections(int sock_ds, int max_size) {
     }
 }
 
+void close_server(int signum) {
+
+    // no-op, prevents compiler warning
+    (void) signum;
+
+    // close an existing socket
+    // if it doesn't exist (equals -1), then there's no need to close it
+    printf("Closing server");
+    if (global_sock_ds != -1) close(global_sock_ds);
+
+    exit(0);
+}
+
 int main() {
 
     // PARAMETERS
@@ -146,11 +186,11 @@ int main() {
     const int max_buf_size = 1024; // maximum size of the buffer
 
     // prevent zombie processes
-    struct sigaction sa;
-    sa.sa_handler = SIG_IGN;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_NOCLDWAIT;
-    sigaction(SIGCHLD, &sa, NULL);
+    struct sigaction zombie_signal;
+    zombie_signal.sa_handler = SIG_IGN;
+    sigemptyset(&zombie_signal.sa_mask);
+    zombie_signal.sa_flags = SA_NOCLDWAIT;
+    sigaction(SIGCHLD, &zombie_signal, NULL);
 
     // initialize the server
     int sock_ds = initialize_server(port_num, backlog);
@@ -158,7 +198,16 @@ int main() {
         perror("Server initialization failed");
         exit(1);
     }
+
     printf("Server successfully initialized, listening on port %d\n", port_num);
+    global_sock_ds = sock_ds;
+
+    // close the server when Ctrl+C is pressed
+    struct sigaction close_signal;
+    close_signal.sa_handler = close_server;
+    sigemptyset(&close_signal.sa_mask);
+    close_signal.sa_flags = 0;
+    sigaction(SIGINT, &close_signal, NULL);
 
     // handle connections from clients
     handle_connections(sock_ds, max_buf_size);
